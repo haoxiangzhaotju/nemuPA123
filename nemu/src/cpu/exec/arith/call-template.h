@@ -7,11 +7,16 @@
 }*/
 make_helper (concat(call_i_, SUFFIX))
 {
+	//get the length og the instruction
 	int len = concat(decode_i_, SUFFIX) (eip + 1);
+	//push the next address into esp
 	reg_l (R_ESP) -= DATA_BYTE;
 	swaddr_write (reg_l (R_ESP) , 4 , cpu.eip + len);
+	//record displacement
 	DATA_TYPE_S displacement = op_src->val;
+	
 	print_asm("call %x",cpu.eip + 1 + len + displacement);
+	//set the eip to the jump address
 	cpu.eip +=displacement;
 	//print_asm("%x\n",cpu.eip);
 	return len + 1;
