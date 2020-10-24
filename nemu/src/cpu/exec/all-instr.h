@@ -19,6 +19,7 @@
 #include "arith/je.h"
 #include "arith/cmp.h"
 #include "arith/pop.h"
+#include "arith/ret.h"
 
 #include "logic/and.h"
 #include "logic/or.h"
