@@ -20,6 +20,7 @@
 #include "arith/cmp.h"
 #include "arith/pop.h"
 #include "arith/ret.h"
+#include "arith/sub.h"
 
 #include "logic/and.h"
 #include "logic/or.h"
