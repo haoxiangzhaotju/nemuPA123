@@ -22,6 +22,7 @@
 #include "arith/ret.h"
 #include "arith/sub.h"
 #include "arith/jmp.h"
+#include "arith/jle.h"
 
 #include "logic/and.h"
 #include "logic/or.h"
