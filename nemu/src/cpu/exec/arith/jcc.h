@@ -12,3 +12,5 @@
 #include "jno.h"
 #include "jp.h"
 #include "jnp.h"
+#include "js.h"
+#include "jns.h"
