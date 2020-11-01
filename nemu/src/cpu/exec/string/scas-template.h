@@ -2,40 +2,32 @@
 
 #define instr scas
 
-static void do_execute(){
-	DATA_TYPE src,dest;
-	if (ops_decoded.is_operand_size_16)
+make_helper(concat(scas_n_,SUFFIX)){
+	swaddr_t s1=REG(R_EAX),s2=swaddr_read(reg_l(R_EDI),DATA_BYTE);
+	uint32_t res=s1-s2;
+	if(cpu.DF==0)
 	{
-		src = swaddr_read (reg_w(R_AX),DATA_BYTE);
-//current_sreg = R_DS;
-		dest = swaddr_read (reg_w (R_DI),DATA_BYTE);		
-		if(cpu.DF==0)reg_w(R_DI)+=DATA_BYTE;
-		else reg_w(R_DI)-=DATA_BYTE;
+		reg_l(R_EDI)+=DATA_BYTE;
+	}else{
+		reg_l(R_EDI)-=DATA_BYTE;
 	}
-	else
-	{
-		src = swaddr_read(reg_l(R_EAX),DATA_BYTE);
-		dest = swaddr_read (reg_l (R_EDI),DATA_BYTE);
-		if(cpu.DF==0)reg_l(R_EDI)+=DATA_BYTE;
-		else reg_w(R_EDI)-=DATA_BYTE;
-	}
-	DATA_TYPE result = src- dest;
-	int len = (DATA_BYTE << 3) - 1;
-	cpu.CF = dest > src;
-	cpu.SF= result >> len;
-    	int s1,s2;
-	s1=dest>>len;
-	s2=src>>len;
-    	cpu.OF=(s1 != s2 && s2 == cpu.SF) ;
-    	cpu.ZF=!result;
-	result ^= result >>4;
-	result ^= result >>2;
-	result ^= result >>1;
-	cpu.PF=!(result & 1);
-	print_asm("cmps");
+	int len = (DATA_BYTE<<3)-1;
+	cpu.ZF = !res;
+	cpu.SF = res >> ((DATA_BYTE <<3)-1);
+	cpu.CF=s1<s2;
+	//int temp1 = (s1) >> ((DATA_BYTE<<3)-1);
+	//int temp2 = (s2) >> ((DATA_BYTE<<3)-1);
+	cpu.OF=(((s1>>len)!=(s2>>len))&&((s2>>len)==cpu.SF));
+	res ^= res >>4;
+	res ^= res >>2;
+	res ^= res >>1;
+	res &=1;
+	cpu.PF = !res;
+	print_asm("scas%s",str(SUFFIX));
+
+	return 1;
 }
 
-make_instr_helper(n)
 
 #include "cpu/exec/template-end.h"
 				
