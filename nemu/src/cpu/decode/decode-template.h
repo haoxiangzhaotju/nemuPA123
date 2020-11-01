@@ -8,7 +8,7 @@
 #define decode_n concat(decode_n_, SUFFIX)
 #define decode_a concat(decode_a_, SUFFIX)
 #define decode_r2rm concat(decode_r2rm_, SUFFIX)
-
+#define update concat(update_,SUFFIX)
 make_helper(concat(decode_n_, SUFFIX)) {
 	op_src->type = OP_TYPE_NO;
 		return 0;
@@ -185,6 +185,16 @@ make_helper(concat(decode_rm_imm_, SUFFIX)) {
 	return len;
 }
 
+make_helper(concat(update_,SUFFIX)){
+	int len = (DATA_BYTE<<3)-1;
+	cpu.SF=eip>>len;
+	cpu.ZF=!eip;
+	eip ^= eip>>4;
+	eip ^= eip>>2;
+	eip ^= eip>>1;
+	cpu.PF = !(eip&1);
+	return 0;
+}
 void concat(write_operand_, SUFFIX) (Operand *op, DATA_TYPE src) {
 	if(op->type == OP_TYPE_REG) { REG(op->reg) = src; }
 	else if(op->type == OP_TYPE_MEM) { swaddr_write(op->addr, op->size, src); }
