@@ -14,9 +14,9 @@ static void do_execute() {
 	cpu.ZF=!result;//judge 0
 	result ^= result >>4;
 	result ^= result >>2;
-	result ^= result >>1;											
+	result ^= result >>1;									
 	cpu.PF=!(result & 1);//judge ji ou
-	print_asm_template2();								
+	print_asm_no_template2();								
 }
 #if DATA_BYTE == 2 || DATA_BYTE == 4
 make_instr_helper(si2rm)
