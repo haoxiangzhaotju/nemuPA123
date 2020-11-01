@@ -12,7 +12,7 @@ static void do_execute () {
 
 	/* TODO: Update EFLAGS. */
 	//panic("please implement me");
-
+	concat(update_,SUFFIX) (dest);
 	print_asm_template2();
 }
 
