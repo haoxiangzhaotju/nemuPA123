@@ -37,7 +37,7 @@
 #include "logic/shrd.h"
 #include "logic/setcc.h"
 
-//#include "string/rep.h"
+#include "string/rep.h"
 #include "string/movs.h"
 #include "string/stos.h"
 #include "string/scas.h"
