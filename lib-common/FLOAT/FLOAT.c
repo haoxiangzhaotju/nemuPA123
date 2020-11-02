@@ -70,7 +70,7 @@ FLOAT f2F(float a) {
 	exp -= 150;
 	if (exp < -16) k >>= -16-exp;
 	if (exp > -16) k <<= 16+exp;
-	return sign==0 ? -k : k;
+	return sign ? -k : k;
 }
 
 FLOAT Fabs(FLOAT a) {
