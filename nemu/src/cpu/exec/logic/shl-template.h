@@ -4,21 +4,23 @@
 
 static void do_execute () {
 	DATA_TYPE src = op_src->val;
-	DATA_TYPE_S dest = op_dest->val;
-	DATA_TYPE_S result = op_dest->val;
+	DATA_TYPE dest = op_dest->val;
+
 	uint8_t count = src & 0x1f;
 	dest <<= count;
-	result = dest;
+	OPERAND_W(op_dest, dest);
 	int len = (DATA_BYTE << 3) - 1;
 	cpu.CF=0;
 	cpu.OF=0;
-	cpu.SF=result >> len;
-    	cpu.ZF=!result;
-    	OPERAND_W(op_dest, dest);
-	result ^= result >>4;
-	result ^= result >>2;
-	result ^= result >>1;
-	cpu.PF=!(result & 1);
+	cpu.SF=dest >> len;
+    	cpu.ZF=!dest;
+		dest ^= dest >>4;
+	dest ^= dest >>2;
+	dest ^= dest >>1;
+	cpu.PF=!(dest & 1);
+	/* TODO: Update EFLAGS. */
+	//panic("please implement me");
+
 	print_asm_template2();
 }
 
