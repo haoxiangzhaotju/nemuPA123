@@ -5,40 +5,44 @@
  */
 #include <sys/types.h>
 #include <regex.h>
-#include <stdlib.h>
+//#include "elf.h"
+//#include "elf.c"
 
+#define max_string_long 32
+#define max_token_num 32
 enum {
-	NOTYPE = 256, EQ
+	NOTYPE = 256, EQ,NUMBER,REGISTER,MINUS,SNUMBER,NEQ,AND,OR,POINTER,MARK
 
 	/* TODO: Add more token types */
-        , NUM, NEQ, OR, AND, REG, REF, NEG
+
 };
 
 static struct rule {
 	char *regex;
 	int token_type;
+	int pri;
 } rules[] = {
 
 	/* TODO: Add more rules.
-	 * Pay attention to the precedence level of different rules.
-	 */
-
-	{" +",	NOTYPE},				// spaces
-	{"\\+", '+'},					// plus
-	{"==", EQ},						// equal
-	{"0x[0-9a-fA-F]{1,8}", NUM},			// hex
-	{"[0-9]{1,10}", NUM},					// dec
-	{"\\$[a-z]{1,31}", REG},				// register names 
-	{"-", '-'},
-	{"\\*", '*'},
-	{"/", '/'},
-	{"%", '%'},
-	{"!=", NEQ},
-	{"&&", AND},
-	{"\\|\\|", OR},
-	{"!", '!'},
-	{"\\(", '('},
-	{"\\)", ')'} 
+	* Pay attention to the precedence level of different rules.
+	*/
+	{"\\b[a-zA-Z_0-9]+" , MARK , 0},		// mark
+	{"!=",NEQ,3},//not equal
+	{"\\(",'(',7},
+	{"\\)",')',7},
+	{"\\*",'*',5},//multi
+	{"/",'/',5},//divide
+	{"-",'-',4},//sub
+	{"\\$[eE][a|c|d|b|s|p][x|p|i]",REGISTER,0},
+        {"-",'-',4},//sub		//register
+	{"0x[a-f0-9]+",SNUMBER,0},
+	{"[0-9]+",NUMBER,0},                               //number
+	{" +",	NOTYPE,0},				// spaces
+	{"\\+", '+',4},					// plus
+	{"==", EQ},
+	{"!=",NEQ,3},//not equal
+        {"&&",AND,2},
+	{"\\|\\|",OR,1},						// equal
 };
 
 #define NR_REGEX (sizeof(rules) / sizeof(rules[0]) )
@@ -65,6 +69,7 @@ void init_regex() {
 typedef struct token {
 	int type;
 	char str[32];
+	int pri;
 } Token;
 
 Token tokens[32];
@@ -75,7 +80,7 @@ static bool make_token(char *e) {
 	int i;
 	regmatch_t pmatch;
 	
-	nr_token = 0;
+	nr_token = 0;//count the number
 
 	while(e[position] != '\0') {
 		/* Try all rules one by one. */
@@ -84,21 +89,25 @@ static bool make_token(char *e) {
 				char *substr_start = e + position;
 				int substr_len = pmatch.rm_eo;
 
-				Log("match rules[%d] = \"%s\" at position %d with len %d: %.*s", i, rules[i].regex, position, substr_len, substr_len, substr_start);
+				//Log("match rules[%d] = \"%s\" at position %d with len %d: %.*s", i, rules[i].regex, position, substr_len, substr_len, substr_start);
 				position += substr_len;
 
 				/* TODO: Now a new token is recognized with rules[i]. Add codes
-				 * to record the token in the array `tokens'. For certain types
-				 * of tokens, some extra actions should be performed.
-				 */
+				* to record the token in the array `tokens'. For certain types
+				* of tokens, some extra actions should be performed.
+				*/
 
 				switch(rules[i].token_type) {
-                                        case NOTYPE: break;
-                                        case NUM:
-					//default: panic("please implement me");
-                                        case REG: sprintf(tokens[nr_token].str, "%.*s", substr_len, substr_start);
-					default: tokens[nr_token].type = rules[i].token_type;
-							 nr_token ++;
+					case NOTYPE :
+						break;
+					default:
+						tokens[nr_token].type=rules[i].token_type;
+						tokens[nr_token].pri=rules[i].pri;
+						strncpy(tokens[nr_token].str,substr_start,substr_len);
+//						printf("%x %d\n",tokens[nr_token].str[0],nr_token);
+						tokens[nr_token].str[substr_len]='\0';
+						nr_token++;
+						break;
 				}
 
 				break;
@@ -111,169 +120,180 @@ static bool make_token(char *e) {
 		}
 	}
 
-	return true; 
+	return true;
 }
 
-/*TODO: Expression evaluation*/
-
-static int op_prec(int t) {
-	switch(t) {
-		case '!': case NEG: case REF: return 0;
-		case '*': case '/': case '%': return 1;
-		case '+': case '-': return 2;
-		case EQ: case NEQ: return 4;
-		case AND: return 8;
-		case OR: return 9;
-		default: assert(0);
-	}
-}
-
-static inline int op_prec_cmp(int t1, int t2) {
-	return op_prec(t1) - op_prec(t2);
-}
-
-static int find_dominated_op(int s, int e, bool *success) {
-	int i;
-	int bracket_level = 0;
-	int dominated_op = -1;
-	for(i = s; i <= e; i ++) {
-		switch(tokens[i].type) {
-			case REG: case NUM: break;
-
-			case '(': 
-				bracket_level ++; 
+int dominant_operator (int start,int end){
+	int i,j;
+	int min = 10;
+	int op= start;
+	for (i = start; i <= end;i ++){
+		if (tokens[i].type == NUMBER || tokens[i].type == SNUMBER || tokens[i].type == REGISTER)
+			continue;
+		int count = 0;
+		bool key = true;
+		for (j = i - 1; j >=start ;j --){
+			if (tokens[j].type == '(' && !count){
+				key = false;
 				break;
-
-			case ')': 
-				bracket_level --; 
-				if(bracket_level < 0) {
-					*success = false;
-					return 0;
-				}
-				break;
-
-			default:
-				if(bracket_level == 0) {
-					if(dominated_op == -1 || 
-							op_prec_cmp(tokens[dominated_op].type, tokens[i].type) < 0 ||
-							(op_prec_cmp(tokens[dominated_op].type, tokens[i].type) == 0 && 
-							 tokens[i].type != '!' && tokens[i].type != '~' &&
-							 tokens[i].type != NEG && tokens[i].type != REF) ) {
-						dominated_op = i;
-					}
-				}
-				break;
+			}
+			if (tokens[j].type == '(')
+				count--;
+			if (tokens[j].type == ')')
+				count++;
 		}
-	}
-
-	*success = (dominated_op != -1);
-	return dominated_op;
+		if (!key)continue;
+		if (tokens[i].pri <= min){
+			min = tokens[i].pri;
+			op= i;
+		}
+ 	}
+	return op;
 }
 
-uint32_t get_reg_val(const char*, bool *);
-
-static uint32_t eval(int s, int e, bool *success) {
-	if(s > e) {
-		// bad expression
-		*success = false;
-		return 0;
-	}
-	else if(s == e) {
-		// single token
-		uint32_t val;
-		switch(tokens[s].type) {
-			case REG: val = get_reg_val(tokens[s].str + 1, success);	// +1 to skip '$'
-					  if(!*success) { return 0; }
-					  break;
-
-			case NUM: val = strtol(tokens[s].str, NULL, 0); break;
-
-			default: assert(0);
-		}
-
-		*success = true;
-		return val;
-	}
-	else if(tokens[s].type == '(' && tokens[e].type == ')') {
-		return eval(s + 1, e - 1, success);
-	}
-	else {
-		int dominated_op = find_dominated_op(s, e, success);
-		if(!*success) { return 0; }
-
-		int op_type = tokens[dominated_op].type;
-		if(op_type == '!' || op_type == NEG || op_type == REF) {
-			uint32_t val = eval(dominated_op + 1, e, success);
-			if(!*success) { return 0; }
-
-			switch(op_type) {
-				case '!': return !val;
-				case NEG: return -val;
-				case REF: return swaddr_read(val, 4);
-				default: assert(0);
+bool check_parentheses(int start,int end){
+	if(tokens[start].type=='('&&tokens[end].type==')'){
+		int i;
+		int count=0;
+		for(i=start+1;i<end;i++){
+			if(tokens[i].type=='(')
+				count++;
+			if(tokens[i].type==')')
+				count--;
+			if(count<0){
+				printf("hh\n");
+				Assert(0,"WRONG EXPRESSION");
 			}
 		}
-
-		uint32_t val1 = eval(s, dominated_op - 1, success);
-		if(!*success) { return 0; }
-		uint32_t val2 = eval(dominated_op + 1, e, success);
-		if(!*success) { return 0; }
-
-		switch(op_type) {
-			case '+': return val1 + val2;
-			case '-': return val1 - val2;
-			case '*': return val1 * val2;
-			case '/': return val1 / val2;
-			case '%': return val1 % val2;
-			case EQ: return val1 == val2;
-			case NEQ: return val1 != val2;
-			case AND: return val1 && val2;
-			case OR: return val1 || val2;
-			default: assert(0);
+		if(count!=0){
+			printf("aa\n");
+			Assert(0,"WRONG EXPRESSION");	
 		}
+		return true;
+	}
+	return false;
+}
+
+uint32_t eval(int start,int end){
+	if(start>end){
+		Assert(start>end,"cound not find token\n");
+	}
+	int i=0;
+	for(i=0;i<nr_token;i++){
+		if(tokens[i].type=='-'&&(i==0||tokens[i-1].type=='(')){
+			tokens[i].type=MINUS;
+		}
+	}//judge whether it's minus or sub
+	if(start==end){
+		//printf("hhh\n");
+		uint32_t ans;
+		if(tokens[start].type==NUMBER){
+//			printf("aaa %x %d\n",tokens[start].str[0],start);
+			sscanf(tokens[start].str,"%d",&ans);
+		}
+		if(tokens[start].type==SNUMBER){
+			sscanf(tokens[start].str,"%x",&ans);
+		}
+		//printf("%d\n",ans);
+		if(tokens[start].type==REGISTER){
+			if(tokens[start].str[2]=='a'&&tokens[start].str[3]=='x')
+				ans = cpu.eax;
+			if(tokens[start].str[2]=='c'&&tokens[start].str[3]=='x')
+				ans = cpu.ecx;
+			if(tokens[start].str[2]=='d'&&tokens[start].str[3]=='x')
+				ans = cpu.edx;
+			if(tokens[start].str[2]=='b'&&tokens[start].str[3]=='x')
+				ans = cpu.ebx;
+			if(tokens[start].str[2]=='s'&&tokens[start].str[3]=='p')
+				ans = cpu.esp;
+			if(tokens[start].str[2]=='b'&&tokens[start].str[3]=='p')
+				ans = cpu.ebp;
+			if(tokens[start].str[2]=='s'&&tokens[start].str[3]=='i')
+				ans = cpu.ebp;
+			if(tokens[start].str[2]=='d'&&tokens[start].str[3]=='i')
+				ans = cpu.edi;
+		}/*
+		if (tokens[start].type == MARK)
+		{
+			int i;
+			for (i=0;i<nr_symtab_entry;i++)
+			{
+				if ((symtab[i].st_info&0xf) == STT_OBJECT)
+				{
+					char tmp [max_string_long];
+					int tmplen = symtab[i+1].st_name - symtab[i].st_name - 1;
+					strncpy (tmp,strtab+symtab[i].st_name,tmplen);
+					tmp [tmplen] = '\0';
+					if (strcmp (tmp,tokens[start].str) == 0)
+					{
+						ans = symtab[i].st_value;
+					}
+				}
+			}
+		}*/
+		return ans;
+
+ 	}
+	else if(check_parentheses(start,end) == true) {
+		//printf("hh\n");
+		return eval(start+1,end-1);
+	}
+	else{
+		int op=dominant_operator(start,end);
+		if(start==op||tokens[op].type==MINUS||tokens[op].type==POINTER||tokens[op].type=='!'){
+			uint32_t ans=eval(start+1,end);
+			if(tokens[op].type==MINUS)
+				return -ans;
+			if(tokens[op].type=='!')
+                                return !ans;
+			if(tokens[op].type==POINTER)
+                                return swaddr_read(ans,4);
+
+
+		}
+		uint32_t ans1,ans2;
+		ans1=eval(start,op-1);
+		ans2=eval(op+1,end);
+		switch(tokens[op].type){
+			case '+':return ans1+ans2;
+			case '-':return ans1-ans2;
+			case '*':return ans1*ans2;
+			case '/':return ans1/ans2;
+			case EQ:return ans1==ans2;
+                        case NEQ:return ans1!=ans2;
+                        case AND:return ans1&&ans2;
+                        case OR:return ans1||ans2;
+			default:break;
+		}
+
+
+	return 0;
 	}
 }
 
-/* TODO: Expression evaluation end */
-
-uint32_t expr(char *e, bool *success) {
+		
+uint32_t expr(char *e, bool *success){
 	if(!make_token(e)) {
 		*success = false;
 		return 0;
 	}
-
-	/* TODO: Insert codes to evaluate the expression. */
-       	//panic("please implement me");
-	//return 0;
-        /* Detect REF and NEG tokens */
-	int i;
-	int prev_type;
-	for(i = 0; i < nr_token; i ++) {
-		if(tokens[i].type == '-') {
-			if(i == 0) {
-				tokens[i].type = NEG;
-				continue;
-			}
-
-			prev_type = tokens[i - 1].type;
-			if( !(prev_type == ')' || prev_type == NUM || prev_type == REG) ) {
-				tokens[i].type = NEG;
-			}
-		}
-
-		else if(tokens[i].type == '*') {
-			if(i == 0) {
-				tokens[i].type = REF;
-				continue;
-			}
-
-			prev_type = tokens[i - 1].type;
-			if( !(prev_type == ')' || prev_type == NUM || prev_type == REG) ) {
-				tokens[i].type = REF;
-			}
-		}
+	else{
+		*success = true;
 	}
-
-	return eval(0, nr_token - 1, success);
+	int i;
+	for (i = 0;i < nr_token; i ++) {
+ 		if (tokens[i].type=='*'&&(i==0||(tokens[i - 1].type!=NUMBER&&tokens[i - 1].type!=SNUMBER&&tokens[i - 1].type!= REGISTER&&tokens[i - 1].type !=')'))) {
+			tokens[i].type = POINTER;
+			tokens[i].pri = 6;
+		}
+		if (tokens[i].type =='-'&&(i ==0|| (tokens[i - 1].type != NUMBER && tokens[i - 1].type != SNUMBER && tokens[i - 1].type != REGISTER&&tokens[i - 1].type !=')'))) {
+			tokens[i].type = MINUS;
+			tokens[i].pri = 6;
+ 		}
+  	}
+	/* TODO: Insert codes to evaluate the expression. */
+	//panic("please implement me");
+	return eval(0,nr_token-1);
 }
+
 
