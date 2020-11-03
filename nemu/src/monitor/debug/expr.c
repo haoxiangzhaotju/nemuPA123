@@ -129,7 +129,7 @@ int dominant_operator (int start,int end){
 	int min = 10;
 	int op= start;
 	for (i = start; i <= end;i ++){
-		if (tokens[i].type == NUMBER || tokens[i].type == SNUMBER || tokens[i].type == REGISTER)
+		if (tokens[i].type == NUMBER || tokens[i].type == SNUMBER || tokens[i].type == REGISTER ||tokens[i].type ==MARK)
 			continue;
 		int count = 0;
 		bool key = true;
