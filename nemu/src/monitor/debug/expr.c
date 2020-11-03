@@ -26,7 +26,7 @@ static struct rule {
 	/* TODO: Add more rules.
 	* Pay attention to the precedence level of different rules.
 	*/
-	{"\\b[a-zA-Z_0-9]+" , MARK , 0},		// mark
+	
 	{"!=",NEQ,3},//not equal
 	{"\\(",'(',7},
 	{"\\)",')',7},
@@ -42,7 +42,8 @@ static struct rule {
 	{"==", EQ},
 	{"!=",NEQ,3},//not equal
         {"&&",AND,2},
-	{"\\|\\|",OR,1},						// equal
+	{"\\|\\|",OR,1},
+	{"\\b[a-zA-Z_0-9]+" , MARK , 0},		// mark						// equal
 };
 
 #define NR_REGEX (sizeof(rules) / sizeof(rules[0]) )
