@@ -8,8 +8,8 @@
 //#include "elf.h"
 //#include "elf.c"
 
-#define max_string_long 32
-#define max_token_num 32
+//#define max_string_long 32
+//#define max_token_num 32
 enum {
 	NOTYPE = 256, EQ,NUMBER,REGISTER,MINUS,SNUMBER,NEQ,AND,OR,POINTER,MARK
 
@@ -52,6 +52,7 @@ static regex_t re[NR_REGEX];
 /* Rules are used for many times.
  * Therefore we compile them only once before any usage.
  */
+uint32_t get_addr_from_mark(char *mark);
 void init_regex() {
 	int i;
 	char error_msg[128];
@@ -212,25 +213,11 @@ uint32_t eval(int start,int end){
 				ans = cpu.ebp;
 			if(tokens[start].str[2]=='d'&&tokens[start].str[3]=='i')
 				ans = cpu.edi;
-		}/*
+		}
 		if (tokens[start].type == MARK)
 		{
-			int i;
-			for (i=0;i<nr_symtab_entry;i++)
-			{
-				if ((symtab[i].st_info&0xf) == STT_OBJECT)
-				{
-					char tmp [max_string_long];
-					int tmplen = symtab[i+1].st_name - symtab[i].st_name - 1;
-					strncpy (tmp,strtab+symtab[i].st_name,tmplen);
-					tmp [tmplen] = '\0';
-					if (strcmp (tmp,tokens[start].str) == 0)
-					{
-						ans = symtab[i].st_value;
-					}
-				}
-			}
-		}*/
+			ans=get_addr_from_mark(tokens[start].str);
+		}
 		return ans;
 
  	}
