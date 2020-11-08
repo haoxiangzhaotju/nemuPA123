@@ -1,7 +1,7 @@
 #include "trap.h"
 
 int add(int a, int b) {
-	set_bp();
+	//set_bp();
 	int c = a + b;
 	return c;
 }
