@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "FLOAT.h"
+#include <sys/mman.h>
 
 extern char _vfprintf_internal;
 extern char _fpmaxtostr;
@@ -9,12 +10,13 @@ extern int __stdio_fwrite(char *buf, int len, FILE *stream);
 
 __attribute__((used)) static int format_FLOAT(FILE *stream, FLOAT f) {
 	/* TODO: Format a FLOAT argument `f' and write the formating
-	 * result to `stream'. Keep the precision of the formating
-	 * result with 6 by truncating. For example:
-	 *              f          result
-	 *         0x00010000    "1.000000"
-	 *         0x00013333    "1.199996"
-	 */
+	* result to `stream'. Keep the precision of the formating
+	* result with 6 by truncating. For example:
+	*              f          result
+	*         0x00010000    "1.000000"
+	*         0x00013333    "1.199996"
+	*/
+
 	char buf[80];
 	int sign = f & 0x80000000;
 	int len, dc = 0;
@@ -38,10 +40,10 @@ __attribute__((used)) static int format_FLOAT(FILE *stream, FLOAT f) {
 
 static void modify_vfprintf() {
 	/* TODO: Implement this function to hijack the formating of "%f"
-	 * argument during the execution of `_vfprintf_internal'. Below
-	 * is the code section in _vfprintf_internal() relative to the
-	 * hijack.
-	 */
+	* argument during the execution of `_vfprintf_internal'. Below
+	* is the code section in _vfprintf_internal() relative to the
+	* hijack.
+	*/
 	int addr = &_vfprintf_internal;
 
 	// mprotect((void *)((addr+0x306 - 0x64) & 0xfffff000), 4096 * 2, PROT_READ | PROT_WRITE | PROT_EXEC);
@@ -73,6 +75,7 @@ static void modify_vfprintf() {
 
 	int *pos = (int *)(addr + 0x307);
 	*pos += (int)format_FLOAT - (int)(&_fpmaxtostr);
+	
 
 #if 0
 	else if (ppfs->conv_num <= CONV_A) {  /* floating point */
@@ -80,8 +83,8 @@ static void modify_vfprintf() {
 		nf = _fpmaxtostr(stream,
 				(__fpmax_t)
 				(PRINT_INFO_FLAG_VAL(&(ppfs->info),is_long_double)
-				 ? *(long double *) *argptr
-				 : (long double) (* (double *) *argptr)),
+				? *(long double *) *argptr
+				: (long double) (* (double *) *argptr)),
 				&ppfs->info, FP_OUT );
 		if (nf < 0) {
 			return -1;
@@ -93,10 +96,10 @@ static void modify_vfprintf() {
 #endif
 
 	/* You should modify the run-time binary to let the code above
-	 * call `format_FLOAT' defined in this source file, instead of
-	 * `_fpmaxtostr'. When this function returns, the action of the
-	 * code above should do the following:
-	 */
+	* call `format_FLOAT' defined in this source file, instead of
+	* `_fpmaxtostr'. When this function returns, the action of the
+	* code above should do the following:
+	*/
 
 #if 0
 	else if (ppfs->conv_num <= CONV_A) {  /* floating point */
@@ -115,10 +118,10 @@ static void modify_vfprintf() {
 
 static void modify_ppfs_setargs() {
 	/* TODO: Implement this function to modify the action of preparing
-	 * "%f" arguments for _vfprintf_internal() in _ppfs_setargs().
-	 * Below is the code section in _vfprintf_internal() relative to
-	 * the modification.
-	 */
+	* "%f" arguments for _vfprintf_internal() in _ppfs_setargs().
+	* Below is the code section in _vfprintf_internal() relative to
+	* the modification.
+	*/
 	int addr = &_ppfs_setargs;
 	// mprotect((void*)((addr+0x73-0x64) & 0xfffff000), 4096*2, PROT_READ | PROT_WRITE | PROT_EXEC);
 	char *pos = (char *)(addr + 0x71);
@@ -196,12 +199,12 @@ static void modify_ppfs_setargs() {
 #endif
 
 	/* You should modify the run-time binary to let the `PA_DOUBLE'
-	 * branch execute the code in the `(PA_INT|PA_FLAG_LONG_LONG)'
-	 * branch. Comparing to the original `PA_DOUBLE' branch, the
-	 * target branch will also prepare a 64-bit argument, without
-	 * introducing floating point instructions. When this function
-	 * returns, the action of the code above should do the following:
-	 */
+	* branch execute the code in the `(PA_INT|PA_FLAG_LONG_LONG)'
+	* branch. Comparing to the original `PA_DOUBLE' branch, the
+	* target branch will also prepare a 64-bit argument, without
+	* introducing floating point instructions. When this function
+	* returns, the action of the code above should do the following:
+	*/
 
 #if 0
 	while (i < ppfs->num_data_args) {
@@ -228,3 +231,4 @@ void init_FLOAT_vfprintf() {
 	modify_vfprintf();
 	modify_ppfs_setargs();
 }
+
