@@ -38,12 +38,14 @@
 #include "logic/shr.h"
 #include "logic/shrd.h"
 #include "logic/setcc.h"
+#include "logic/std.h"
 
 #include "string/rep.h"
 #include "string/movs.h"
 #include "string/stos.h"
 #include "string/scas.h"
 #include "string/lods.h"
+#include "string/cld.h"
 
 #include "misc/misc.h"
 
