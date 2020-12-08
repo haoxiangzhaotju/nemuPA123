@@ -235,7 +235,7 @@ uint32_t eval(int start,int end){
 			if(tokens[op].type=='!')
                                 return !ans;
 			if(tokens[op].type==POINTER)
-                                return swaddr_read(ans,4);
+                                return swaddr_read(ans,4,R_DS);
 
 
 		}

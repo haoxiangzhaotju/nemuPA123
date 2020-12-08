@@ -37,12 +37,12 @@ char* rl_gets() {
 }
 
 static void read_ebp(swaddr_t addr, PSF *ebp) {
-	ebp->prev_ebp = swaddr_read(addr, 4);
-	ebp->ret_addr = swaddr_read(addr+4, 4);
+	ebp->prev_ebp = swaddr_read(addr, 4,R_SS);
+	ebp->ret_addr = swaddr_read(addr+4, 4,R_SS);
 	int i;
 	for ( i = 0; i < 4; i++)
 	{
-		ebp->args[i] = swaddr_read(addr+8+4*i, 4);
+		ebp->args[i] = swaddr_read(addr+8+4*i, 4,R_SS);
 	}
 	
 }
@@ -115,7 +115,7 @@ static int cmd_x(char *args) {
 					printf("0x%08x: ", addr);
 				}
 
-				printf("0x%08x ", swaddr_read(addr, 4));
+				printf("0x%08x ", swaddr_read(addr, 4,R_DS));
 				addr += 4;
 				if(i % 4 == 3) {
 					printf("\n");
