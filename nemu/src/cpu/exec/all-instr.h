@@ -6,6 +6,7 @@
 #include "data-mov/cltd.h"
 #include "data-mov/leave.h"
 #include "data-mov/movzx.h"
+#include "data-mov/lgdt.h"
 
 #include "arith/dec.h"
 #include "arith/inc.h"
