@@ -16,7 +16,7 @@ void resetTLB() {
     int i;
     for ( i = 0; i < TLB_SIZE; i++)
     {
-        //tlb[i].valid = false;
+        tlb[i].valid = false;
     }
     
 }
