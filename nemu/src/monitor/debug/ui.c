@@ -162,6 +162,20 @@ static int cmd_d(char *args) {
 	return 0;
 }
 
+static int cmd_page(char *args) {
+	if (args == NULL) return 0;
+	lnaddr_t lnaddr;
+	sscanf(args, "%x", &lnaddr);
+	hwaddr_t hwaddr = page_translate(lnaddr, 1);
+	if (!cpu.cr0.protect_enable || !cpu.cr0.paging)
+	{
+		printf("\033[1;33mPage address convertion is invalid.\n\033[0m");
+	}
+	printf("0x%x -> 0x%x\n", lnaddr, hwaddr);
+	return 0;
+	
+}
+
 static int cmd_c(char *args) {
 	cpu_exec(-1);
 	return 0;
@@ -190,7 +204,7 @@ static struct {
 	{ "w", "Set watchpoint", cmd_w },
 	{ "d", "Delete watchpoint", cmd_d },
 	{ "bt" , "Print stack frame",cmd_bt},
-
+	{ "page", "Convert virtual address to physical address", cmd_page},
 };
 
 #define NR_CMD (sizeof(cmd_table) / sizeof(cmd_table[0]))
